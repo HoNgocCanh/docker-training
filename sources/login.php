@@ -3,10 +3,19 @@
 require_once __DIR__ . '/configs/redis.php';
 require_once __DIR__ . '/sessions/SessionHandlerRedis.php';
 require_once __DIR__ . '/helpers/Csrf.php';
+require_once __DIR__ . '/helpers/XSSProtection.php';
 
-$handler = new SessionHandlerRedis($redis);
-session_set_save_handler($handler, true);
-session_start();
+// Thêm security headers
+XSSProtection::addSecurityHeaders();
+
+try {
+    $handler = new SessionHandlerRedis($redis);
+    session_set_save_handler($handler, true);
+    session_start();
+} catch (Exception $e) {
+    // Log lỗi và xử lý phù hợp
+    die("Session error: " . $e->getMessage());
+}
 
 require_once 'models/UserModel.php';
 $userModel = new UserModel();
@@ -14,14 +23,15 @@ $userModel = new UserModel();
 
 if (!empty($_POST['submit'])) {
     // Kiểm tra CSRF
-    if (!Csrf::verifyToken($_POST['csrf_token'] ?? '')) {
-        $_SESSION['message'] = "Invalid CSRF token, please try again.";
+    $csrf_check = Csrf::verifyToken($_POST['csrf_token'] ?? '');
+    if (!$csrf_check['valid']) {
+        $_SESSION['message'] = $csrf_check['message'];
         header("Location: login.php");
         exit;
     }
     $users = [
-        'username' => $_POST['username'],
-        'password' => $_POST['password']
+        'username' => XSSProtection::clean($_POST['username']),
+        'password' => $_POST['password'] // Không cần clean password vì sẽ được hash
     ];
     $user = NULL;
     if ($user = $userModel->auth($users['username'], $users['password'])) {

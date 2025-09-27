@@ -25,8 +25,13 @@ class UserModel extends BaseModel {
      * @return array
      */
     public function auth($userName, $password) {
+        // Clean username trước khi query
+        $cleanUsername = XSSProtection::clean($userName);
         $md5Password = md5($password);
-        $sql = 'SELECT * FROM users WHERE name = "' . $userName . '" AND password = "'.$md5Password.'"';
+        
+        $sql = 'SELECT * FROM users WHERE name = "' . 
+            mysqli_real_escape_string(self::$_connection, $cleanUsername) . 
+            '" AND password = "' . $md5Password . '"';
 
         $user = $this->select($sql);
         return $user;
@@ -65,12 +70,16 @@ class UserModel extends BaseModel {
      * @return mixed
      */
     public function insertUser($input) {
-        $sql = "INSERT INTO `app_web1`.`users` (`name`, `password`) VALUES (" .
-                "'" . $input['name'] . "', '".md5($input['password'])."')";
+    $sql = "INSERT INTO `app_web1`.`users` (`name`, `fullname`, `email`, `type`, `password`) VALUES (" .
+        "'" . mysqli_real_escape_string(self::$_connection, $input['name']) . "', " .
+        "'" . mysqli_real_escape_string(self::$_connection, $input['fullname']) . "', " .
+        "'" . mysqli_real_escape_string(self::$_connection, $input['email']) . "', " .
+        "'" . mysqli_real_escape_string(self::$_connection, $input['type']) . "', " .
+        "'" . md5($input['password']) . "')";
 
-        $user = $this->insert($sql);
+    $user = $this->insert($sql);
 
-        return $user;
+    return $user;
     }
 
     /**
@@ -81,15 +90,11 @@ class UserModel extends BaseModel {
     public function getUsers($params = []) {
         //Keyword
         if (!empty($params['keyword'])) {
-            $sql = 'SELECT * FROM users WHERE name LIKE "%' . $params['keyword'] .'%"';
-
-            //Keep this line to use Sql Injection
-            //Don't change
-            //Example keyword: abcef%";TRUNCATE banks;##
-            $users = self::$_connection->multi_query($sql);
-
-            //Get data
-            $users = $this->query($sql);
+            $keyword = mysqli_real_escape_string(self::$_connection, $params['keyword']);
+            $sql = 'SELECT * FROM users WHERE name LIKE "%' . $keyword . '%"';
+            // Debug query
+            error_log("SQL Query: " . $sql);
+            $users = $this->select($sql);
         } else {
             $sql = 'SELECT * FROM users';
             $users = $this->select($sql);

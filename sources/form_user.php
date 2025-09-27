@@ -1,8 +1,10 @@
 <?php
 // Start the session
 require_once __DIR__ . '/helpers/Csrf.php';
+require_once __DIR__ . '/helpers/XSSProtection.php';
 
 session_start();
+XSSProtection::addSecurityHeaders();
 require_once 'models/UserModel.php';
 $userModel = new UserModel();
 
@@ -60,7 +62,22 @@ if (!empty($_POST['submit'])) {
                 <input type="hidden" name="id" value="<?php echo $_id ?>">
                 <div class="form-group">
                     <label for="name">Name</label>
-                    <input class="form-control" name="name" placeholder="Name" value='<?php if (!empty($user[0]['name'])) echo $user[0]['name'] ?>'>
+                    <input class="form-control" name="name" placeholder="Name" maxlength="100" value='<?php if (!empty($user[0]['name'])) echo XSSProtection::escape($user[0]['name']) ?>'>
+                </div>
+                <div class="form-group">
+                    <label for="fullname">Fullname</label>
+                    <input class="form-control" name="fullname" placeholder="Fullname" value='<?php if (!empty($user[0]['fullname'])) echo $user[0]['fullname'] ?>'>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input class="form-control" name="email" placeholder="Email" value='<?php if (!empty($user[0]['email'])) echo $user[0]['email'] ?>'>
+                </div>
+                <div class="form-group">
+                    <label for="type">Type</label>
+                    <select class="form-control" name="type">
+                        <option value="user" <?php if (!empty($user[0]['type']) && $user[0]['type'] == 'user') echo 'selected'; ?>>User</option>
+                        <option value="admin" <?php if (!empty($user[0]['type']) && $user[0]['type'] == 'admin') echo 'selected'; ?>>Admin</option>
+                    </select>
                 </div>
                 <div class="form-group">
                     <label for="password">Password</label>
